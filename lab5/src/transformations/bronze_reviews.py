@@ -7,7 +7,7 @@ REVIEWS_SOURCE_PATH = spark.conf.get("reviews.source_path")
 @dp.table(
     name="reviews",
     comment="Raw product reviews ingested incrementally from CSV files with Auto Loader",
-    table_properties={"delta.appendOnly": "true"},
+    table_properties={"delta.appendOnly": "true", "delta.appendOnly": "false"},
 )
 def reviews():
     return (
