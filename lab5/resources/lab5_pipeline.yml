@@ -1,0 +1,18 @@
+resources:
+  pipelines:
+    lab5_sdp_pipeline:
+      name: lab5_sdp_pipeline
+      catalog: ${var.catalog}
+      schema: ${var.bronze_schema}
+      serverless: true
+      libraries:
+        - glob:
+            include: ../src/transformations/**
+      configuration:
+        eventhub.namespace: ${var.eventhub_namespace}
+        eventhub.name: ${var.eventhub_name}
+        eventhub.secret_scope: ${var.secret_scope}
+        eventhub.secret_key: ${var.eventhub_listen_secret_key}
+        reviews.source_path: /Volumes/${var.catalog}/${var.source_schema}/raw_data/reviews
+        silver.schema: ${var.silver_schema}
+      

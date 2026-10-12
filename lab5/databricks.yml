@@ -1,0 +1,43 @@
+bundle:
+  name: lab5_declarative_pipeline
+
+include:
+  - resources/*.yml
+
+sync:
+  exclude:
+    - producer/
+
+variables:
+  catalog:
+    description: Unity Catalog catalog that holds all pipeline tables
+  bronze_schema:
+    description: Schema for raw ingested tables
+  silver_schema:
+    description: Schema for cleaned and validated tables
+  source_schema:
+    description: Schema that owns the source volumes
+  eventhub_namespace:
+    description: Event Hubs namespace that hosts the streaming source
+  eventhub_name:
+    description: Event Hub the pipeline consumes from
+  secret_scope:
+    description: Secret scope holding the Event Hub connection string
+  eventhub_listen_secret_key:
+    description: Secret key of the Listen-only Event Hub connection string
+
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      host: https://adb-7405604651938730.10.azuredatabricks.net
+    variables:
+      catalog: dbr_dev_ua5816bd
+      bronze_schema: elina_sharabura_bronze
+      silver_schema: elina_sharabura_silver
+      source_schema: elina_sharabura
+      eventhub_namespace: evhua5816bd
+      eventhub_name: elina-sharabura-eventhub
+      secret_scope: elina_sharabura-personal-scope
+      eventhub_listen_secret_key: elina-sharabura-eventhub-connstr-listen

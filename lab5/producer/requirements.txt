@@ -1,0 +1,3 @@
+azure-eventhub>=5.11
+requests>=2.31
+websocket-client>=1.8
