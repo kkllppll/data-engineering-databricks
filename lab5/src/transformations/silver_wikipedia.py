@@ -45,9 +45,19 @@ def silver_wikipedia_recentchange():
             (F.col("event.length.new") - F.col("event.length.old")).alias(
                 "length_delta"
             ),
+            "partition",
+            "offset",
             "eventhub_enqueued_at",
             "ingestion_timestamp",
         )
+        .withColumn(
+            "deduplication_key",
+            F.coalesce(
+                F.col("event_id").cast("string"),
+                F.concat_ws(":", F.lit("offset"), F.col("partition"), F.col("offset")),
+            ),
+        )
         .withWatermark("eventhub_enqueued_at", DEDUPLICATION_WINDOW)
-        .dropDuplicatesWithinWatermark(["event_id"])
+        .dropDuplicatesWithinWatermark(["deduplication_key"])
+        .drop("deduplication_key")
     )
