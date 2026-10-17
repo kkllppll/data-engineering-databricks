@@ -117,13 +117,6 @@ Result: 59,163 order lines, 33,580 orders, net revenue $4,493,217.47.
 - **Grants:** `USE SCHEMA` and `SELECT` on gold business tables for `students`; `access_rules` is not granted. Reviewer has full access through `access_rules`.
 - Verified by restricting the current user to `DE` without PII: tables and the dashboard (with no filters set) show only Germany, PII columns show `***`.
 
-## Limitations
-
-- `loyalty_tier` is filled for 2 of 20,005 customer versions, so it is not used in analytics.
-- Customer history is known only from the start of tracking; older orders use the first known version.
-- `students` holds `ALL PRIVILEGES` on the catalog (inherited), so effective access is wider than the schema-level grants and members could modify `access_rules`. In production the reader group would get only `USE CATALOG` at catalog level and entitlements would live in a restricted schema.
-- Load notebooks run as the user and read through the row filters; in production they would run as a service principal with full access.
-- Without a stable line id from the source, re-ingesting the same file under a new name would create duplicates that cannot be told apart from real lines.
 
 
 
