@@ -33,10 +33,8 @@ erDiagram
         int date_key FK
         bigint customer_sk FK
         int product_id FK
-        string country
-        string payment_method
-        string device
-        string source
+        bigint country_key FK
+        bigint order_channel_key FK
         int quantity
         decimal unit_price_usd
         int discount_pct
@@ -73,16 +71,29 @@ erDiagram
     }
     agg_daily_sales {
         int date_key PK
-        string country PK
+        bigint country_key PK
         string category PK
         bigint orders_count
         bigint items_count
         decimal net_amount_usd
     }
+    dim_country {
+        bigint country_key PK
+        string country_code
+    }
+    dim_order_channel {
+        bigint order_channel_key PK
+        string payment_method
+        string device
+        string source
+    }
     dim_date ||--o{ fact_order_items : date_key
     dim_customer ||--o{ fact_order_items : customer_sk
     dim_product ||--o{ fact_order_items : product_id
     dim_date ||--o{ agg_daily_sales : date_key
+    dim_country ||--o{ fact_order_items : country_key
+    dim_order_channel ||--o{ fact_order_items : order_channel_key
+    dim_country ||--o{ agg_daily_sales : country_key
 ```
 
 Result: 59,163 order lines, 33,580 orders, net revenue $4,493,217.47.
@@ -98,6 +109,7 @@ Result: 59,163 order lines, 33,580 orders, net revenue $4,493,217.47.
 - **Static `dim_date`** loaded once for several years ahead; the fact quality gate fails if an order date is outside the calendar.
 - **No order timestamp in the fact** (high cardinality, not used for analysis).
 - **Quality gate** in the fact build: row count must match silver and every line must get a customer version.
+- **Only measures and dimension keys in the fact.** Order country is a separate `dim_country` (also the anchor for row-level security); payment method, device and source form a junk dimension `dim_order_channel`. Dimension members are added with insert-only `MERGE`, so surrogate keys stay stable between runs.
 
 ## Dashboard, Genie, alert
 
