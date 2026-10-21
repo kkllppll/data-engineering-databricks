@@ -1,0 +1,38 @@
+name: lab7 unit tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "lab7/**"
+      - ".github/workflows/lab7-ci.yml"
+  pull_request:
+    paths:
+      - "lab7/**"
+      - ".github/workflows/lab7-ci.yml"
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: lab7
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    env:
+      SPARK_LOCAL: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: lab7/pyproject.toml
+      - name: Install the package with local Spark
+        run: pip install -e ".[local]"
+      - name: Run unit tests with the coverage threshold
+        run: pytest --cov

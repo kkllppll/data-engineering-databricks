@@ -1,0 +1,237 @@
+# Data-quality rules applied with DQX after every lab7_load run.
+# ${bronze}, ${silver} and ${gold} are replaced with the full schema names at run time.
+# criticality: error fails the suite (and CI); warn is only recorded in dq_results.
+# Raw bronze data may be dirty by design (silver quarantines it), so bronze checks only warn.
+
+${bronze}.orders:
+  - name: bronze_orders_order_id_not_null
+    criticality: warn
+    user_metadata: {dimension: completeness}
+    check:
+      function: is_not_null
+      arguments:
+        column: order_id
+
+${bronze}.order_items:
+  - name: bronze_order_items_keys_not_null
+    criticality: warn
+    user_metadata: {dimension: completeness}
+    check:
+      function: sql_expression
+      arguments:
+        expression: order_id IS NOT NULL AND product_id IS NOT NULL
+        msg: order line without order_id or product_id
+  - name: bronze_order_items_no_rescued_data
+    criticality: warn
+    user_metadata: {dimension: validity}
+    check:
+      function: is_null
+      arguments:
+        column: _rescued_data
+
+${silver}.orders:
+  - name: silver_orders_order_id_unique
+    criticality: error
+    user_metadata: {dimension: uniqueness}
+    check:
+      function: is_unique
+      arguments:
+        columns: [order_id]
+  # DQX resolves bare strings in `allowed` as column expressions, so text values are SQL-quoted
+  - name: silver_orders_payment_method_accepted
+    criticality: error
+    user_metadata: {dimension: validity}
+    check:
+      function: is_in_list
+      arguments:
+        column: payment_method
+        allowed: ["'card'", "'paypal'", "'wallet'", "'cod'"]
+  - name: silver_orders_device_accepted
+    criticality: error
+    user_metadata: {dimension: validity}
+    check:
+      function: is_in_list
+      arguments:
+        column: device
+        allowed: ["'mobile'", "'desktop'", "'tablet'"]
+  - name: silver_orders_source_accepted
+    criticality: error
+    user_metadata: {dimension: validity}
+    check:
+      function: is_in_list
+      arguments:
+        column: source
+        allowed: ["'organic'", "'direct'", "'paid'", "'social'", "'email'", "'referral'"]
+  - name: silver_orders_country_iso2
+    criticality: error
+    user_metadata: {dimension: validity}
+    check:
+      function: sql_expression
+      arguments:
+        expression: country RLIKE '^[A-Z]{2}$'
+        msg: country is not an ISO-2 code
+  - name: silver_orders_total_matches_discount
+    criticality: error
+    user_metadata: {dimension: consistency}
+    check:
+      function: sql_expression
+      arguments:
+        expression: abs(total_usd - subtotal_usd * (1 - discount_pct / 100)) <= 0.01
+        msg: total_usd does not match subtotal_usd after discount
+  - name: silver_orders_customer_exists
+    criticality: error
+    user_metadata: {dimension: consistency}
+    check:
+      function: foreign_key
+      arguments:
+        columns: [customer_id]
+        ref_columns: [customer_id]
+        ref_table: ${silver}.customers
+
+${silver}.order_items:
+  - name: silver_order_items_line_unique
+    criticality: error
+    user_metadata: {dimension: uniqueness}
+    check:
+      function: is_unique
+      arguments:
+        columns: [order_id, line_number]
+  - name: silver_order_items_line_total_matches_price
+    criticality: error
+    user_metadata: {dimension: consistency}
+    check:
+      function: sql_expression
+      arguments:
+        expression: abs(line_total_usd - unit_price_usd * quantity) <= 0.01
+        msg: line_total_usd does not match unit_price_usd * quantity
+  - name: silver_order_items_order_exists
+    criticality: error
+    user_metadata: {dimension: consistency}
+    check:
+      function: foreign_key
+      arguments:
+        columns: [order_id]
+        ref_columns: [order_id]
+        ref_table: ${silver}.orders
+  - name: silver_order_items_product_exists
+    criticality: error
+    user_metadata: {dimension: consistency}
+    check:
+      function: foreign_key
+      arguments:
+        columns: [product_id]
+        ref_columns: [product_id]
+        ref_table: ${silver}.products
+
+${gold}.fact_order_items:
+  - name: fact_line_unique
+    criticality: error
+    user_metadata: {dimension: uniqueness}
+    check:
+      function: is_unique
+      arguments:
+        columns: [order_id, line_number]
+  # The next three rules cannot be CHECK constraints: the fact has a row filter (Lab 6 governance).
+  - name: fact_quantity_positive
+    criticality: error
+    user_metadata: {dimension: validity}
+    check:
+      function: is_not_less_than
+      arguments:
+        column: quantity
+        limit: 1
+  - name: fact_discount_in_range
+    criticality: error
+    user_metadata: {dimension: validity}
+    check:
+      function: is_in_range
+      arguments:
+        column: discount_pct
+        min_limit: 0
+        max_limit: 100
+  - name: fact_net_equals_gross_minus_discount
+    criticality: error
+    user_metadata: {dimension: consistency}
+    check:
+      function: sql_expression
+      arguments:
+        expression: net_amount_usd = gross_amount_usd - discount_amount_usd
+        msg: net amount is not gross minus discount
+  - name: fact_customer_version_exists
+    criticality: error
+    user_metadata: {dimension: consistency}
+    check:
+      function: foreign_key
+      arguments:
+        columns: [customer_sk]
+        ref_columns: [customer_sk]
+        ref_table: ${gold}.dim_customer
+  - name: fact_product_exists
+    criticality: error
+    user_metadata: {dimension: consistency}
+    check:
+      function: foreign_key
+      arguments:
+        columns: [product_id]
+        ref_columns: [product_id]
+        ref_table: ${gold}.dim_product
+  - name: fact_date_exists
+    criticality: error
+    user_metadata: {dimension: consistency}
+    check:
+      function: foreign_key
+      arguments:
+        columns: [date_key]
+        ref_columns: [date_key]
+        ref_table: ${gold}.dim_date
+  - name: fact_country_exists
+    criticality: error
+    user_metadata: {dimension: consistency}
+    check:
+      function: foreign_key
+      arguments:
+        columns: [country_key]
+        ref_columns: [country_key]
+        ref_table: ${gold}.dim_country
+  - name: fact_order_channel_exists
+    criticality: error
+    user_metadata: {dimension: consistency}
+    check:
+      function: foreign_key
+      arguments:
+        columns: [order_channel_key]
+        ref_columns: [order_channel_key]
+        ref_table: ${gold}.dim_order_channel
+  - name: fact_loaded_within_last_day
+    criticality: error
+    user_metadata: {dimension: timeliness}
+    check:
+      function: is_data_fresh
+      arguments:
+        column: processed_at
+        max_age_minutes: 1440
+
+${gold}.dim_customer:
+  - name: dim_customer_sk_unique
+    criticality: error
+    user_metadata: {dimension: uniqueness}
+    check:
+      function: is_unique
+      arguments:
+        columns: [customer_sk]
+  - name: dim_customer_one_current_version
+    criticality: error
+    user_metadata: {dimension: uniqueness}
+    filter: is_current
+    check:
+      function: is_unique
+      arguments:
+        columns: [customer_id]
+  - name: dim_customer_validity_range_ordered
+    criticality: error
+    user_metadata: {dimension: consistency}
+    check:
+      function: sql_expression
+      arguments:
+        expression: effective_from <= effective_to
+        msg: SCD2 version ends before it starts

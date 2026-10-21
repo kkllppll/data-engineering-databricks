@@ -1,0 +1,27 @@
+resources:
+  jobs:
+    lab7_dq_suite:
+      name: lab7_dq_suite
+      schedule:
+        quartz_cron_expression: "0 30 6 * * ?"
+        timezone_id: Europe/Kyiv
+        pause_status: PAUSED
+      email_notifications:
+        on_failure:
+          - ${workspace.current_user.userName}
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+        - name: schema_prefix
+          default: ${var.schema_prefix}
+        - name: src_path
+          default: ${workspace.file_path}/src
+        - name: checks_path
+          default: ${workspace.file_path}/dq/checks.yml
+        - name: run_id
+          default: "{{job.run_id}}"
+      tasks:
+        - task_key: dq_suite
+          max_retries: 0
+          notebook_task:
+            notebook_path: ../notebooks/06_dq_suite.py

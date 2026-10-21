@@ -1,0 +1,27 @@
+bundle:
+  name: lab7_data_quality
+
+include:
+  - resources/*.yml
+
+sync:
+  exclude:
+    - .venv
+    - .pytest_cache
+    - tests
+
+variables:
+  catalog:
+    description: Unity Catalog catalog that holds the medallion schemas
+  schema_prefix:
+    description: Prefix of the personal bronze, silver and gold schemas
+
+targets:
+  trial:
+    mode: development
+    default: true
+    workspace:
+      host: https://adb-7405613488297663.3.azuredatabricks.net
+    variables:
+      catalog: dbr_dev_ua5816bd
+      schema_prefix: elina_sharabura

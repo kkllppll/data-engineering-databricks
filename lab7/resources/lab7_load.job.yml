@@ -1,0 +1,43 @@
+resources:
+  jobs:
+    lab7_load:
+      name: lab7_load
+      schedule:
+        quartz_cron_expression: "0 0 6 * * ?"
+        timezone_id: Europe/Kyiv
+        pause_status: PAUSED
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+        - name: schema_prefix
+          default: ${var.schema_prefix}
+        - name: src_path
+          default: ${workspace.file_path}/src
+      tasks:
+        - task_key: bronze_order_items
+          notebook_task:
+            notebook_path: ../notebooks/01_bronze_order_items.py
+
+        - task_key: silver_orders
+          notebook_task:
+            notebook_path: ../notebooks/02_silver_orders.py
+
+        - task_key: silver_order_items
+          depends_on:
+            - task_key: bronze_order_items
+            - task_key: silver_orders
+          notebook_task:
+            notebook_path: ../notebooks/03_silver_order_items.py
+
+        - task_key: gold_dims
+          depends_on:
+            - task_key: silver_orders
+          notebook_task:
+            notebook_path: ../notebooks/04_gold_dims.py
+
+        - task_key: gold_fact
+          depends_on:
+            - task_key: gold_dims
+            - task_key: silver_order_items
+          notebook_task:
+            notebook_path: ../notebooks/05_gold_fact.py
