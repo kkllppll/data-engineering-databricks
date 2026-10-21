@@ -4,8 +4,13 @@
 dbutils.widgets.text("catalog", "")
 dbutils.widgets.text("schema_prefix", "")
 
-CATALOG = dbutils.widgets.get("catalog")
-SCHEMA_PREFIX = dbutils.widgets.get("schema_prefix")
+CATALOG = dbutils.widgets.get("catalog").strip()
+SCHEMA_PREFIX = dbutils.widgets.get("schema_prefix").strip()
+
+if not CATALOG or not SCHEMA_PREFIX:
+    raise ValueError(
+        "Set the catalog and schema_prefix widgets before running this notebook"
+    )
 
 SILVER = f"{CATALOG}.{SCHEMA_PREFIX}_silver"
 GOLD = f"{CATALOG}.{SCHEMA_PREFIX}_gold"

@@ -52,13 +52,15 @@ NULL `order_id` into one. `keep_latest` now keeps them, so they reach the quaran
 
 ### Where the tests run
 
-| Where | Spark | Command |
+| Where | Spark | How |
 |---|---|---|
-| VS Code / terminal | Databricks serverless via Databricks Connect | `pytest --cov` |
-| GitHub Actions | local PySpark | `.github/workflows/lab7-ci.yml` on every push and pull request |
+| VS Code (debugging) | Databricks serverless via Databricks Connect | run or debug a test from the IDE |
+| Terminal, headless | Databricks serverless via Databricks Connect | `pytest --cov`, authenticated with the Databricks CLI profile `trial3` |
+| GitHub Actions (CI gate) | local PySpark | `.github/workflows/lab7-ci.yml` on every push and pull request |
 
 CI fails when a test fails or coverage drops below 90% (current coverage: 95%).
-CI runs only unit tests: data-quality checks run as a separate Databricks job (Part B).
+Following the guidance, CI checks only the code: DQX is a separate data-quality pipeline,
+so data-quality checks run in the `lab7_dq_suite` job (Part B), which is scheduled after the load and alerts by email on failure.
 
 ![Unit tests](screenshots/01_unit_tests_passed.jpg)
 ![CI run](screenshots/16_ci_unit_tests_success.jpg)
@@ -135,3 +137,5 @@ One silver order line was deleted to simulate silent data loss. The suite failed
 ![Gate failed](screenshots/13_dq_gate_failed.jpg)
 ![Failed checks](screenshots/14_dq_gate_failed_details.jpg)
 ![Run history](screenshots/15_dq_suite_run_history.jpg)
+
+
