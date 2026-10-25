@@ -1,6 +1,6 @@
 # Data-quality rules applied with DQX after every lab8_load run.
 # ${bronze}, ${silver} and ${gold} are replaced with the full schema names at run time.
-# criticality: error fails the suite (and CI); warn is only recorded in dq_results.
+# criticality: error fails the suite (and the daily job); warn is only recorded in dq_results.
 # Raw bronze data may be dirty by design (silver quarantines it), so bronze checks only warn.
 
 ${bronze}.orders:
