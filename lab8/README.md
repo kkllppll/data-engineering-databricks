@@ -166,7 +166,7 @@ and the data-quality suite passed again.
 - No `print` in the notebooks; the schedule is configured and paused.
 
 
-
+- **Terraform (optional) — next step.** This lab uses Azure resources that already exist, so the bundle alone covers the project. The next step would be to describe the Azure side in Terraform as well: storage account, workspace, Key Vault and the one-time bootstrap (service principal grants), so the whole platform could be recreated from code.
 
 The `prod` target is deployed only by CI.
 

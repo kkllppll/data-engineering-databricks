@@ -31,7 +31,6 @@ variables:
     lookup:
       warehouse: Serverless Starter Warehouse
 
-targets:
 
 targets:
   dev:
