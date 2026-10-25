@@ -1,0 +1,24 @@
+resources:
+  jobs:
+    lab8_dq_suite:
+      name: lab8_dq_suite
+      description: DQX checks and reconciliation across the medallion; fails on any error-level check
+      max_concurrent_runs: 1
+      email_notifications:
+        on_failure:
+          - ${var.notification_email}
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+        - name: schema_prefix
+          default: ${var.schema_prefix}
+        - name: src_path
+          default: ${workspace.file_path}/src
+        - name: checks_path
+          default: ${workspace.file_path}/dq/checks.yml
+        - name: run_id
+          default: "{{job.run_id}}"
+      tasks:
+        - task_key: dq_suite
+          notebook_task:
+            notebook_path: ../notebooks/06_dq_suite.py

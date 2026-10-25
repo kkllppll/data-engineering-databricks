@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "orders-pipeline"
+version = "0.1.0"
+description = "Lab 7: Data Quality Testing & Unit Tests"
+requires-python = ">=3.12,<3.13"
+dependencies = []
+
+[project.optional-dependencies]
+connect = ["databricks-connect==17.*", "pytest>=8", "pytest-cov>=5"]
+local = ["pyspark==4.0.*", "pytest>=8", "pytest-cov>=5"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+
+filterwarnings = [
+    "ignore:The 'warn' method is deprecated:DeprecationWarning",
+    "ignore:.*PYARROW_IGNORE_TIMEZONE:UserWarning",
+]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.coverage.run]
+source = ["orders_pipeline"]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 90

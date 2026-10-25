@@ -1,0 +1,30 @@
+resources:
+  jobs:
+    lab8_daily:
+      name: lab8_daily
+      description: Daily run of the whole project; CI/CD starts it after every PROD deployment
+      max_concurrent_runs: 1
+      email_notifications:
+        on_failure:
+          - ${var.notification_email}
+      schedule:
+        quartz_cron_expression: "0 0 6 * * ?"
+        timezone_id: Europe/Kyiv
+        pause_status: PAUSED
+      tasks:
+        - task_key: load
+          run_job_task:
+            job_id: ${resources.jobs.lab8_load.id}
+
+        # the raw review files reach the volume in the copy_raw_files task of the load job
+        - task_key: reviews
+          depends_on:
+            - task_key: load
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.lab8_reviews_pipeline.id}
+
+        - task_key: data_quality
+          depends_on:
+            - task_key: load
+          run_job_task:
+            job_id: ${resources.jobs.lab8_dq_suite.id}

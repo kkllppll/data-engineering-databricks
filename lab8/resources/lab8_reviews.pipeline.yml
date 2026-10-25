@@ -1,0 +1,14 @@
+resources:
+  pipelines:
+    lab8_reviews_pipeline:
+      name: lab8_reviews_pipeline
+      catalog: ${var.catalog}
+      schema: ${var.schema_prefix}_bronze
+      serverless: true
+      libraries:
+        - glob:
+            include: ../pipelines/reviews/**
+      configuration:
+        reviews.source_path: /Volumes/${var.catalog}/${var.schema_prefix}/raw_data/reviews
+        reviews.table: ${var.reviews_table}
+        silver.schema: ${var.schema_prefix}_silver

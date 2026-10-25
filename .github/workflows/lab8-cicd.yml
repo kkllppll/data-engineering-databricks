@@ -1,0 +1,96 @@
+name: lab8 CI/CD
+
+# Pull request to main: unit tests and validation of the PROD bundle.
+# Merge to main: unit tests, then deploy to PROD, create the table structure and run the daily job.
+# PROD is changed only by this workflow, authenticated as the service principal.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "lab8/**"
+      - ".github/workflows/lab8-cicd.yml"
+  push:
+    branches: [main]
+    paths:
+      - "lab8/**"
+      - ".github/workflows/lab8-cicd.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: lab8
+
+env:
+  DATABRICKS_CLI_VERSION: "1.20.0"
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    env:
+      SPARK_LOCAL: "1"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: lab8/pyproject.toml
+      - name: Install the package with local Spark
+        run: pip install -e ".[local]"
+      - name: Run unit tests with the coverage threshold
+        run: pytest --cov
+
+  validate-prod:
+    if: github.event_name == 'pull_request'
+    needs: unit-tests
+    runs-on: ubuntu-latest
+    environment: prod
+    env:
+      DATABRICKS_AUTH_TYPE: azure-client-secret
+      ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+      ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+      ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: databricks/setup-cli@main
+        with:
+          version: ${{ env.DATABRICKS_CLI_VERSION }}
+      - name: Validate the PROD bundle
+        run: databricks bundle validate -t prod
+
+  deploy-prod:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: unit-tests
+    runs-on: ubuntu-latest
+    environment: prod
+    # one deployment at a time; a newer merge waits instead of cancelling a running deployment
+    concurrency:
+      group: lab8-prod-deploy
+      cancel-in-progress: false
+    env:
+      DATABRICKS_AUTH_TYPE: azure-client-secret
+      ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+      ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+      ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: databricks/setup-cli@main
+        with:
+          version: ${{ env.DATABRICKS_CLI_VERSION }}
+      - name: Validate
+        run: databricks bundle validate -t prod
+      # without --auto-approve a change that deletes resources stops here and needs a human
+      - name: Deploy
+        run: databricks bundle deploy -t prod
+      - name: Create and update the table structure
+        run: databricks bundle run lab8_setup -t prod
+      - name: Run the daily job
+        run: databricks bundle run lab8_daily -t prod
