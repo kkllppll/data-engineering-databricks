@@ -1,0 +1,34 @@
+resources:
+  jobs:
+    lab8_setup:
+      name: lab8_setup
+      description: Creates and updates the table structure; run by CI/CD after every deployment
+      max_concurrent_runs: 1
+      email_notifications:
+        on_failure:
+          - ${var.notification_email}
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+        - name: schema_prefix
+          default: ${var.schema_prefix}
+        - name: dim_date_start
+          default: "2020-01-01"
+        - name: dim_date_end
+          default: "2030-12-31"
+      tasks:
+        - task_key: create_tables
+          notebook_task:
+            notebook_path: ../setup/01_create_tables.py
+
+        - task_key: add_constraints
+          depends_on:
+            - task_key: create_tables
+          notebook_task:
+            notebook_path: ../setup/02_constraints.py
+
+        - task_key: load_dim_date
+          depends_on:
+            - task_key: create_tables
+          notebook_task:
+            notebook_path: ../setup/03_dim_date.py

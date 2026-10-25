@@ -1,0 +1,760 @@
+{
+  "datasets": [
+    {
+      "name": "77280ab6",
+      "displayName": "sales_daily",
+      "queryLines": [
+        "SELECT\n",
+        "  d.full_date        AS order_date,\n",
+        "  c.country_code     AS country,\n",
+        "  a.category,\n",
+        "  a.items_count,\n",
+        "  a.quantity,\n",
+        "  a.gross_amount_usd,\n",
+        "  a.discount_amount_usd,\n",
+        "  a.net_amount_usd\n",
+        "FROM agg_daily_sales a\n",
+        "JOIN dim_date    d ON a.date_key    = d.date_key\n",
+        "JOIN dim_country c ON a.country_key = c.country_key"
+      ]
+    },
+    {
+      "name": "bcf2a65a",
+      "displayName": "order_lines",
+      "queryLines": [
+        "SELECT\n",
+        "  f.order_id,\n",
+        "  d.full_date        AS order_date,\n",
+        "  c.country_code     AS country,\n",
+        "  p.category,\n",
+        "  ch.payment_method,\n",
+        "  ch.device,\n",
+        "  f.quantity,\n",
+        "  f.net_amount_usd\n",
+        "FROM fact_order_items f\n",
+        "JOIN dim_date          d  ON f.date_key          = d.date_key\n",
+        "JOIN dim_product       p  ON f.product_id        = p.product_id\n",
+        "JOIN dim_country       c  ON f.country_key       = c.country_key\n",
+        "JOIN dim_order_channel ch ON f.order_channel_key = ch.order_channel_key"
+      ],
+      "columns": [
+        {
+          "displayName": "avg_order_value",
+          "description": "",
+          "expression": "  SUM(net_amount_usd) / COUNT(DISTINCT order_id)"
+        }
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "a64c059f",
+      "displayName": "Overview",
+      "layout": [
+        {
+          "widget": {
+            "name": "net-revenue",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "bcf2a65a",
+                  "fields": [
+                    {
+                      "name": "sum(net_amount_usd)",
+                      "expression": "SUM(`net_amount_usd`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Net revenue",
+                  "fields": []
+                }
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(net_amount_usd)"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 1,
+            "y": 0,
+            "width": 4,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "orders",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "bcf2a65a",
+                  "fields": [
+                    {
+                      "name": "countdistinct(order_id)",
+                      "expression": "COUNT(DISTINCT `order_id`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Orders",
+                  "fields": []
+                }
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "countdistinct(order_id)",
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 2
+                    }
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 5,
+            "y": 0,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "average-order-value",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "bcf2a65a",
+                  "fields": [
+                    {
+                      "name": "measure(avg_order_value)",
+                      "expression": "MEASURE(`avg_order_value`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Average order value",
+                  "fields": []
+                }
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(avg_order_value)"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 8,
+            "y": 0,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "net-revenue-by-month",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "77280ab6",
+                  "fields": [
+                    {
+                      "name": "monthly(order_date)",
+                      "expression": "DATE_TRUNC(\"MONTH\", `order_date`)"
+                    },
+                    {
+                      "name": "sum(net_amount_usd)",
+                      "expression": "SUM(`net_amount_usd`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Net revenue by month",
+                  "fields": []
+                }
+              },
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "monthly(order_date)",
+                  "scale": {
+                    "type": "temporal"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(net_amount_usd)",
+                  "axis": {
+                    "title": "Net revenue, USD"
+                  },
+                  "scale": {
+                    "type": "quantitative",
+                    "domain": {
+                      "type": "custom",
+                      "min": 0
+                    }
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 1,
+            "y": 3,
+            "width": 10,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "net-revenue-by-category",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "77280ab6",
+                  "fields": [
+                    {
+                      "name": "category",
+                      "expression": "`category`"
+                    },
+                    {
+                      "name": "sum(net_amount_usd)",
+                      "expression": "SUM(`net_amount_usd`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Net revenue by category",
+                  "fields": []
+                }
+              },
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "category",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "y-reversed"
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(net_amount_usd)",
+                  "axis": {
+                    "title": "Net revenue, USD"
+                  },
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 1,
+            "y": 9,
+            "width": 5,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "net-revenue-by-country",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "77280ab6",
+                  "fields": [
+                    {
+                      "name": "country",
+                      "expression": "`country`"
+                    },
+                    {
+                      "name": "sum(net_amount_usd)",
+                      "expression": "SUM(`net_amount_usd`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Net revenue by country",
+                  "fields": []
+                }
+              },
+              "version": 3,
+              "mark": {
+                "colors": [
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 3
+                  }
+                ]
+              },
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "country",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "y-reversed"
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(net_amount_usd)",
+                  "axis": {
+                    "title": "Net revenue, USD"
+                  },
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 9,
+            "width": 5,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "orders-by-payment-method",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "bcf2a65a",
+                  "fields": [
+                    {
+                      "name": "payment_method",
+                      "expression": "`payment_method`"
+                    },
+                    {
+                      "name": "countdistinct(order_id)",
+                      "expression": "COUNT(DISTINCT `order_id`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Orders by payment method",
+                  "fields": []
+                }
+              },
+              "version": 3,
+              "mark": {
+                "colors": [
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 3
+                  }
+                ]
+              },
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "payment_method",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "countdistinct(order_id)",
+                  "axis": {
+                    "title": "Orders"
+                  },
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 1,
+            "y": 15,
+            "width": 5,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "orders-by-device",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "bcf2a65a",
+                  "fields": [
+                    {
+                      "name": "device",
+                      "expression": "`device`"
+                    },
+                    {
+                      "name": "countdistinct(order_id)",
+                      "expression": "COUNT(DISTINCT `order_id`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Orders by device",
+                  "fields": []
+                }
+              },
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "device",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "y-reversed"
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "countdistinct(order_id)",
+                  "axis": {
+                    "title": "Orders"
+                  },
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 15,
+            "width": 5,
+            "height": 6
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    },
+    {
+      "name": "024f789f",
+      "displayName": "Global Filters",
+      "layout": [
+        {
+          "widget": {
+            "name": "order-date",
+            "queries": [
+              {
+                "name": "dashboards/01f1ca0a42061b89a8c4c795720c019a/datasets/01f1ca0a69cb1d1ab72f87a7fa651fc0_order_date",
+                "query": {
+                  "datasetName": "77280ab6",
+                  "fields": [
+                    {
+                      "name": "order_date",
+                      "expression": "`order_date`"
+                    },
+                    {
+                      "name": "order_date_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "dashboards/01f1ca0a42061b89a8c4c795720c019a/datasets/01f1ca0abb601787a7bc7cb58cecfe68_order_date",
+                "query": {
+                  "datasetName": "bcf2a65a",
+                  "fields": [
+                    {
+                      "name": "order_date",
+                      "expression": "`order_date`"
+                    },
+                    {
+                      "name": "order_date_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Order date",
+                  "fields": []
+                }
+              },
+              "widgetType": "filter-date-range-picker",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "order_date",
+                    "queryName": "dashboards/01f1ca0a42061b89a8c4c795720c019a/datasets/01f1ca0a69cb1d1ab72f87a7fa651fc0_order_date"
+                  },
+                  {
+                    "fieldName": "order_date",
+                    "queryName": "dashboards/01f1ca0a42061b89a8c4c795720c019a/datasets/01f1ca0abb601787a7bc7cb58cecfe68_order_date"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "country",
+            "queries": [
+              {
+                "name": "dashboards/01f1ca0a42061b89a8c4c795720c019a/datasets/01f1ca0a69cb1d1ab72f87a7fa651fc0_country",
+                "query": {
+                  "datasetName": "77280ab6",
+                  "fields": [
+                    {
+                      "name": "country",
+                      "expression": "`country`"
+                    },
+                    {
+                      "name": "country_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "dashboards/01f1ca0a42061b89a8c4c795720c019a/datasets/01f1ca0abb601787a7bc7cb58cecfe68_country",
+                "query": {
+                  "datasetName": "bcf2a65a",
+                  "fields": [
+                    {
+                      "name": "country",
+                      "expression": "`country`"
+                    },
+                    {
+                      "name": "country_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Country",
+                  "fields": []
+                }
+              },
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "country",
+                    "queryName": "dashboards/01f1ca0a42061b89a8c4c795720c019a/datasets/01f1ca0a69cb1d1ab72f87a7fa651fc0_country"
+                  },
+                  {
+                    "fieldName": "country",
+                    "queryName": "dashboards/01f1ca0a42061b89a8c4c795720c019a/datasets/01f1ca0abb601787a7bc7cb58cecfe68_country"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 1,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "category",
+            "queries": [
+              {
+                "name": "dashboards/01f1ca0a42061b89a8c4c795720c019a/datasets/01f1ca0a69cb1d1ab72f87a7fa651fc0_category",
+                "query": {
+                  "datasetName": "77280ab6",
+                  "fields": [
+                    {
+                      "name": "category",
+                      "expression": "`category`"
+                    },
+                    {
+                      "name": "category_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "dashboards/01f1ca0a42061b89a8c4c795720c019a/datasets/01f1ca0abb601787a7bc7cb58cecfe68_category",
+                "query": {
+                  "datasetName": "bcf2a65a",
+                  "fields": [
+                    {
+                      "name": "category",
+                      "expression": "`category`"
+                    },
+                    {
+                      "name": "category_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Category",
+                  "fields": []
+                }
+              },
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "category",
+                    "queryName": "dashboards/01f1ca0a42061b89a8c4c795720c019a/datasets/01f1ca0a69cb1d1ab72f87a7fa651fc0_category"
+                  },
+                  {
+                    "fieldName": "category",
+                    "queryName": "dashboards/01f1ca0a42061b89a8c4c795720c019a/datasets/01f1ca0abb601787a7bc7cb58cecfe68_category"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 4,
+            "width": 1,
+            "height": 2
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_GLOBAL_FILTERS",
+      "layoutVersion": "GRID_V1"
+    }
+  ],
+  "uiSettings": {
+    "theme": {
+      "widgetHeaderAlignment": "ALIGNMENT_UNSPECIFIED"
+    },
+    "applyModeEnabled": false
+  }
+}

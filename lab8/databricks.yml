@@ -1,0 +1,110 @@
+bundle:
+  name: lab8_cicd
+
+include:
+  - resources/*.yml
+
+sync:
+  exclude:
+    - tests
+
+variables:
+  catalog:
+    description: Unity Catalog catalog of the target environment
+  schema_prefix:
+    description: Prefix of the personal schemas (<prefix>, <prefix>_bronze, _silver, _gold)
+    default: elina_sharabura
+  raw_source_path:
+    description: Landing zone with the source CSV files; PROD copies new files from here
+    default: /Volumes/dbr_dev_ua5816bd/elina_sharabura/raw_data
+  reader_group:
+    description: Group that can read the PROD schemas and volumes
+    default: students
+  notification_email:
+    description: Who gets an email when a job fails
+    default: kkllpaall@softserve.academy
+  reviews_table:
+    description: Name of the reviews tables; DEV uses its own name because Lab 5 and Lab 7 pipelines own the existing ones
+    default: reviews
+  warehouse_id:
+    description: SQL warehouse that runs the dashboard queries
+    lookup:
+      warehouse: Serverless Starter Warehouse
+
+targets:
+
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      host: https://adb-7405604651938730.10.azuredatabricks.net
+    variables:
+      catalog: dbr_dev_ua5816bd
+      reviews_table: reviews_lab8
+
+  prod:
+    mode: production
+    workspace:
+      host: https://adb-7405613488297663.3.azuredatabricks.net
+      root_path: /Workspace/Users/d1a2118a-1d70-44cf-ba58-ea3454da6727/.bundle/${bundle.name}/${bundle.target}
+    run_as:
+      service_principal_name: d1a2118a-1d70-44cf-ba58-ea3454da6727
+    permissions:
+      - service_principal_name: d1a2118a-1d70-44cf-ba58-ea3454da6727
+        level: CAN_MANAGE
+      - user_name: kkllpaall@softserve.academy
+        level: CAN_MANAGE
+      - group_name: students
+        level: CAN_VIEW
+    variables:
+      catalog: dbr_dev_ua_5816_trail_3
+    resources:
+      schemas:
+        base:
+          catalog_name: ${var.catalog}
+          name: ${var.schema_prefix}
+          comment: Volumes and data-quality results
+          lifecycle:
+            prevent_destroy: true
+          grants:
+            - principal: ${var.reader_group}
+              privileges: [USE_SCHEMA, SELECT, READ_VOLUME]
+        bronze:
+          catalog_name: ${var.catalog}
+          name: ${var.schema_prefix}_bronze
+          comment: Raw data as ingested
+          lifecycle:
+            prevent_destroy: true
+          grants:
+            - principal: ${var.reader_group}
+              privileges: [USE_SCHEMA, SELECT]
+        silver:
+          catalog_name: ${var.catalog}
+          name: ${var.schema_prefix}_silver
+          comment: Validated data and the quarantine
+          lifecycle:
+            prevent_destroy: true
+          grants:
+            - principal: ${var.reader_group}
+              privileges: [USE_SCHEMA, SELECT]
+        gold:
+          catalog_name: ${var.catalog}
+          name: ${var.schema_prefix}_gold
+          comment: Star schema for reporting
+          lifecycle:
+            prevent_destroy: true
+          grants:
+            - principal: ${var.reader_group}
+              privileges: [USE_SCHEMA, SELECT]
+      volumes:
+        raw_data:
+          catalog_name: ${var.catalog}
+          schema_name: ${resources.schemas.base.name}
+          name: raw_data
+          comment: Source CSV files copied from the landing zone
+        checkpoints:
+          catalog_name: ${var.catalog}
+          schema_name: ${resources.schemas.base.name}
+          name: checkpoints
+          comment: Auto Loader checkpoints and schema locations

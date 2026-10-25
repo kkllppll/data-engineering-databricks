@@ -1,0 +1,102 @@
+resources:
+  jobs:
+    lab8_load:
+      name: lab8_load
+      description: Loads the orders medallion from the raw CSV files to the gold star schema
+      max_concurrent_runs: 1
+      email_notifications:
+        on_failure:
+          - ${var.notification_email}
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+        - name: schema_prefix
+          default: ${var.schema_prefix}
+        - name: src_path
+          default: ${workspace.file_path}/src
+        - name: raw_source_path
+          default: ${var.raw_source_path}
+      tasks:
+        - task_key: copy_raw_files
+          notebook_task:
+            notebook_path: ../notebooks/07_copy_raw_files.py
+
+        - task_key: bronze_orders
+          depends_on:
+            - task_key: copy_raw_files
+          notebook_task:
+            notebook_path: ../notebooks/08_bronze_ingest.py
+            base_parameters:
+              table: orders
+              file_pattern: "orders*.csv"
+
+        - task_key: bronze_customers
+          depends_on:
+            - task_key: copy_raw_files
+          notebook_task:
+            notebook_path: ../notebooks/08_bronze_ingest.py
+            base_parameters:
+              table: customers
+              file_pattern: "customers*.csv"
+
+        - task_key: bronze_products
+          depends_on:
+            - task_key: copy_raw_files
+          notebook_task:
+            notebook_path: ../notebooks/08_bronze_ingest.py
+            base_parameters:
+              table: products
+              file_pattern: "products*.csv"
+
+        - task_key: bronze_order_items
+          depends_on:
+            - task_key: copy_raw_files
+          notebook_task:
+            notebook_path: ../notebooks/01_bronze_order_items.py
+
+        - task_key: silver_products
+          depends_on:
+            - task_key: bronze_products
+          notebook_task:
+            notebook_path: ../notebooks/09_silver_products.py
+
+        - task_key: silver_customers
+          depends_on:
+            - task_key: bronze_customers
+          notebook_task:
+            notebook_path: ../notebooks/10_silver_customers.py
+
+        - task_key: silver_orders
+          depends_on:
+            - task_key: bronze_orders
+            - task_key: silver_customers
+          notebook_task:
+            notebook_path: ../notebooks/02_silver_orders.py
+
+        - task_key: silver_order_items
+          depends_on:
+            - task_key: bronze_order_items
+            - task_key: silver_orders
+            - task_key: silver_products
+          notebook_task:
+            notebook_path: ../notebooks/03_silver_order_items.py
+
+        - task_key: gold_dims
+          depends_on:
+            - task_key: silver_orders
+            - task_key: silver_products
+          notebook_task:
+            notebook_path: ../notebooks/04_gold_dims.py
+
+        - task_key: gold_fact
+          depends_on:
+            - task_key: gold_dims
+            - task_key: silver_order_items
+          notebook_task:
+            notebook_path: ../notebooks/05_gold_fact.py
+
+        - task_key: gold_aggregates
+          depends_on:
+            - task_key: gold_fact
+          notebook_task:
+            notebook_path: ../notebooks/11_gold_aggregates.py
