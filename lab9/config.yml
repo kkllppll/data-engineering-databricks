@@ -1,0 +1,10 @@
+dev:
+  job_name: "[dev kkllpaall] lab8_daily"
+  cluster:
+    policy_name: Personal Compute
+    node_type_id: Standard_D4ds_v5
+    name_prefix: lab9-smoke
+    autotermination_minutes: 20
+  smoke_check:
+    catalog: dbr_dev_ua5816bd
+    schema_prefix: elina_sharabura
