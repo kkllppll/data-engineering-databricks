@@ -125,20 +125,23 @@ in CI the environment variables of the service principal. No credentials in the 
 - The Lab 8 workflow is not changed.
 
 
-### Status of the e2e job in CI
 
-The `e2e` job cannot sign in to `dbr_dev` yet:
+### One-time bootstrap
 
-```
-AADSTS7000222: The provided client secret keys for app are expired.
-```
+In CI the script runs as the service principal `sp-databricks-adls`. It needs three permissions in `dbr_dev`
+that the script itself does not grant:
 
-Azure accepts the tenant and the application ID of `sp-databricks-adls`; only its client secret is expired.
-A personal access token is not
-an option either: `User does not have permission to use tokens`. The job fails within seconds with exit code 1,
-before anything is created. 
+1. **Run the job:** `CAN_MANAGE_RUN` on `[dev kkllpaall] lab8_daily`. The job is managed by the Lab 8 bundle,
+   so the UI does not allow editing its permissions; the permission was added with
+   `databricks permissions update jobs <job_id> --json @perm.json`. A new `bundle deploy -t dev` of Lab 8 may reset it.
+2. **Read gold:** `USE SCHEMA` on `elina_sharabura_gold` and `SELECT` on the seven business tables.
+   `access_rules` is not granted, as for the reader group in Lab 6.
+3. **Row-level security:** a row in `access_rules` for the application ID of the service principal:
+   all countries, `can_see_pii = false`. Without it the Lab 6 row filter returns no rows of `fact_order_items`
+   and `agg_daily_sales` to the service principal.
 
-The same scenario was run locally end to end (screenshots below).
+Creating the cluster needs no extra grant: the `Personal Compute` policy is available to the service principal.
+
 
 ## Unit tests
 
@@ -190,5 +193,8 @@ What the smoke check verified:
 Pull request: unit tests passed, `e2e` skipped:
 ![PR checks](screenshots/08_ci_unit_tests_pr.jpg)
 
-`e2e` in CI: the service principal secret is expired:
-![CI e2e](screenshots/09_ci_e2e_expired_secret.jpg)
+`e2e` in CI as the service principal, both jobs green:
+![CI e2e](screenshots/09_ci_e2e_success.jpg)
+
+The same run: the summary of every step:
+![CI e2e log](screenshots/10_ci_e2e_log.jpg)
