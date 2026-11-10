@@ -25,3 +25,28 @@ OPTIONS (database 'sqldb-adventureworkslt');
 
 CREATE SCHEMA IF NOT EXISTS dbr_dev_ua5816bd.elina_sharabura_lab10
 COMMENT 'Lab 10: Delta tables for the federation comparison and the CDC pipeline';
+
+
+-- COMMAND ----------
+
+-- start_lsn / end_lsn: which CDC event opened and closed the version, also used as the watermark
+CREATE TABLE IF NOT EXISTS dbr_dev_ua5816bd.elina_sharabura_lab10.dim_customer_scd2 (
+  customer_id     INT,
+  title           STRING,
+  first_name      STRING,
+  middle_name     STRING,
+  last_name       STRING,
+  suffix          STRING,
+  company_name    STRING,
+  sales_person    STRING,
+  email_address   STRING,
+  phone           STRING,
+  modified_date   TIMESTAMP,
+  valid_from      TIMESTAMP,
+  valid_to        TIMESTAMP,
+  is_current      BOOLEAN,
+  is_deleted      BOOLEAN,
+  start_lsn       BINARY,
+  end_lsn         BINARY
+)
+COMMENT 'Customers from Azure SQL with SCD2 history built from CDC';
