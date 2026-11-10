@@ -1,16 +1,19 @@
--- Databricks notebook source
--- MAGIC %md
--- MAGIC # Lab 10, Part B: CDC merge
--- MAGIC Takes new CDC events for SalesLT.Customer and applies them to dim_customer_scd2 in one MERGE.
--- MAGIC Insert and update make a new version, delete closes the version and marks it as deleted.
+# Databricks notebook source
+# MAGIC %md
+# MAGIC # Lab 10, Part B: CDC merge
+# MAGIC Takes new CDC events for SalesLT.Customer and applies them to dim_customer_scd2 in one MERGE.
+# MAGIC Insert and update make a new version, delete closes the version and marks it as deleted.
 
--- COMMAND ----------
+# COMMAND ----------
 
-CREATE WIDGET TEXT source_catalog DEFAULT 'elina_sharabura_lab10_adventureworkslt';
-CREATE WIDGET TEXT target_table DEFAULT 'dbr_dev_ua5816bd.elina_sharabura_lab10.dim_customer_scd2';
+dbutils.widgets.text("source_catalog", "elina_sharabura_lab10_adventureworkslt")
+dbutils.widgets.text(
+    "target_table", "dbr_dev_ua5816bd.elina_sharabura_lab10.dim_customer_scd2"
+)
 
--- COMMAND ----------
+# COMMAND ----------
 
+MERGE_SQL = """
 MERGE INTO IDENTIFIER(:target_table) AS t
 USING (
   WITH new_events AS (
@@ -89,4 +92,13 @@ WHEN NOT MATCHED AND s.merge_key IS NULL THEN INSERT (
   s.customer_id, s.title, s.first_name, s.middle_name, s.last_name, s.suffix,
   s.company_name, s.sales_person, s.email_address, s.phone, s.modified_date,
   s.valid_from, s.valid_to, s.is_current, s.is_deleted, s.lsn, s.end_lsn
-);
+)
+"""
+
+spark.sql(
+    MERGE_SQL,
+    args={
+        "source_catalog": dbutils.widgets.get("source_catalog"),
+        "target_table": dbutils.widgets.get("target_table"),
+    },
+)
