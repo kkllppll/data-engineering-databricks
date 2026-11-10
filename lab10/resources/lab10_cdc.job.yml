@@ -1,0 +1,30 @@
+resources:
+  jobs:
+    lab10_cdc:
+      name: lab10_cdc
+      description: Applies new CDC events from Azure SQL to the customer SCD2 table and checks it against the source
+      max_concurrent_runs: 1
+      schedule:
+        quartz_cron_expression: "0 0 * * * ?"
+        timezone_id: Europe/Kiev
+        pause_status: PAUSED
+      email_notifications:
+        on_failure:
+          - ${var.notification_email}
+      parameters:
+        - name: source_catalog
+          default: ${var.source_catalog}
+        - name: target_table
+          default: ${var.target_table}
+      tasks:
+        - task_key: cdc_merge
+          existing_cluster_id: ${var.cluster_id}
+          notebook_task:
+            notebook_path: ../notebooks/03_cdc_merge.py
+
+        - task_key: reconciliation
+          depends_on:
+            - task_key: cdc_merge
+          existing_cluster_id: ${var.cluster_id}
+          notebook_task:
+            notebook_path: ../notebooks/04_reconciliation.py
