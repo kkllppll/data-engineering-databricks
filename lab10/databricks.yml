@@ -1,0 +1,31 @@
+bundle:
+  name: lab10_cdc
+
+include:
+  - resources/*.yml
+
+sync:
+  exclude:
+    - screenshots
+
+variables:
+  source_catalog:
+    description: Foreign catalog of the Azure SQL database
+    default: elina_sharabura_lab10_adventureworkslt
+  target_table:
+    description: SCD2 table with the customers
+    default: dbr_dev_ua5816bd.elina_sharabura_lab10.dim_customer_scd2
+  notification_email:
+    description: Who gets an email when the job fails
+    default: kkllpaall@softserve.academy
+  cluster_id:
+    description: Shared cluster for the job, federated queries hit a 1 s timeout on serverless here
+    lookup:
+      cluster: GP1
+
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      host: https://adb-7405604651938730.10.azuredatabricks.net
