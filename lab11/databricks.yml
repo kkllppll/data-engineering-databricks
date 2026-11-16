@@ -1,0 +1,39 @@
+bundle:
+  name: lab11_zerobus
+
+include:
+  - resources/*.yml
+
+sync:
+  exclude:
+    - screenshots
+    # runs on the laptop, and its folder holds .env with the service principal secret
+    - producer
+
+variables:
+  bronze_table:
+    description: Zerobus target table, may contain duplicates
+    default: dbr_dev_ua5816bd.elina_sharabura_lab11.bronze_events
+  silver_table:
+    description: Shop events without duplicates
+    default: dbr_dev_ua5816bd.elina_sharabura_lab11.silver_events
+  checkpoint_path:
+    description: Checkpoint of the bronze to silver stream
+    default: /Volumes/dbr_dev_ua5816bd/elina_sharabura_lab11/checkpoints/silver_events
+  dedup_window_days:
+    description: How far back in arrival time a resent copy is still caught
+    default: "7"
+  notification_email:
+    description: Who gets an email when the job fails
+    default: kkllpaall@softserve.academy
+  cluster_id:
+    description: Shared cluster for the job
+    lookup:
+      cluster: GP1
+
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      host: https://adb-7405604651938730.10.azuredatabricks.net

@@ -1,0 +1,28 @@
+resources:
+  jobs:
+    lab11_silver_dedup:
+      name: lab11_silver_dedup
+      description: Moves new Zerobus events from bronze to silver, each event once
+      # two runs on one checkpoint would break the stream
+      max_concurrent_runs: 1
+      schedule:
+        quartz_cron_expression: "0 0/15 * * * ?"
+        timezone_id: Europe/Kiev
+        pause_status: PAUSED
+      email_notifications:
+        on_failure:
+          - ${var.notification_email}
+      parameters:
+        - name: bronze_table
+          default: ${var.bronze_table}
+        - name: silver_table
+          default: ${var.silver_table}
+        - name: checkpoint_path
+          default: ${var.checkpoint_path}
+        - name: dedup_window_days
+          default: ${var.dedup_window_days}
+      tasks:
+        - task_key: silver_dedup
+          existing_cluster_id: ${var.cluster_id}
+          notebook_task:
+            notebook_path: ../notebooks/01_silver_dedup.py
