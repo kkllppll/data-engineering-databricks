@@ -1,0 +1,70 @@
+# Databricks notebook source
+# MAGIC %md
+# MAGIC # Lab 12: Setup (DDL)
+# MAGIC Schema, volume for the raw Saleor docs and the tables of the RAG pipeline.
+# MAGIC Source: Saleor developer docs (github.com/saleor/saleor-docs, BSD-3-Clause), pinned to one commit.
+
+# COMMAND ----------
+
+dbutils.widgets.text("catalog", "workspace")
+dbutils.widgets.text("schema", "elina_sharabura_lab12")
+
+catalog = dbutils.widgets.get("catalog")
+schema = dbutils.widgets.get("schema")
+fq_schema = f"{catalog}.{schema}"
+
+# COMMAND ----------
+
+spark.sql(f"""
+CREATE SCHEMA IF NOT EXISTS {fq_schema}
+COMMENT 'Lab 12: RAG knowledge assistant over the Saleor developer docs'
+""")
+
+# COMMAND ----------
+
+spark.sql(f"""
+CREATE VOLUME IF NOT EXISTS {fq_schema}.raw_docs
+COMMENT 'Saleor docs .mdx files as downloaded, one folder per source commit'
+""")
+
+# COMMAND ----------
+
+spark.sql(f"""
+CREATE TABLE IF NOT EXISTS {fq_schema}.documents (
+  doc_id         STRING    NOT NULL COMMENT 'path inside docs/developer without extension, e.g. checkout/lifecycle',
+  topic          STRING    NOT NULL COMMENT 'top folder of the page, e.g. checkout, used as a search filter',
+  title          STRING             COMMENT 'title from the page front matter',
+  raw_text       STRING    NOT NULL COMMENT 'page as downloaded, front matter included',
+  source_url     STRING    NOT NULL COMMENT 'page on GitHub at the source commit',
+  source_commit  STRING    NOT NULL COMMENT 'saleor-docs commit the page was taken from',
+  ingested_at    TIMESTAMP NOT NULL,
+  CONSTRAINT documents_pk PRIMARY KEY (doc_id)
+)
+COMMENT 'One row per Saleor docs page'
+""")
+
+# COMMAND ----------
+
+# CDF lets the Delta Sync index pick up only changed chunks
+spark.sql(f"""
+CREATE TABLE IF NOT EXISTS {fq_schema}.chunks (
+  chunk_id         STRING       NOT NULL COMMENT 'doc_id#chunk_index, the same between runs',
+  doc_id           STRING       NOT NULL,
+  chunk_index      INT          NOT NULL COMMENT 'position of the chunk in the page',
+  topic            STRING       NOT NULL,
+  title            STRING,
+  section          STRING                COMMENT 'heading path inside the page',
+  chunk_text       STRING       NOT NULL COMMENT 'cleaned text with the title and section on top',
+  char_count       INT          NOT NULL,
+  content_hash     STRING       NOT NULL COMMENT 'sha2 of chunk_text, a new hash means the vector is stale',
+  source_url       STRING       NOT NULL,
+  source_commit    STRING       NOT NULL,
+  embedding        ARRAY<FLOAT>          COMMENT 'null until the embed step runs',
+  embedding_model  STRING                COMMENT 'serving endpoint that produced the vector',
+  embedded_at      TIMESTAMP,
+  updated_at       TIMESTAMP    NOT NULL,
+  CONSTRAINT chunks_pk PRIMARY KEY (chunk_id)
+)
+COMMENT 'Chunks of the Saleor docs with their vectors, source of the vector search index'
+TBLPROPERTIES (delta.enableChangeDataFeed = true)
+""")

@@ -1,0 +1,30 @@
+bundle:
+  name: lab12_rag
+
+sync:
+  exclude:
+    - screenshots
+
+variables:
+  catalog:
+    description: Unity Catalog catalog of the Free Edition workspace
+    default: workspace
+  schema:
+    description: Lab 12 schema for documents, chunks, logs and evaluation results
+    default: elina_sharabura_lab12
+  embedding_endpoint:
+    description: Model serving endpoint that turns chunks and questions into vectors
+    default: databricks-gte-large-en
+  llm_endpoint:
+    description: Chat model that writes the answer from the retrieved chunks
+    default: databricks-meta-llama-3-3-70b-instruct
+  judge_endpoint:
+    description: Chat model from another family that grades the answers
+    default: databricks-gpt-oss-120b
+
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      host: https://dbc-927f3e1b-27c6.cloud.databricks.com
