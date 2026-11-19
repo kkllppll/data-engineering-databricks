@@ -1,0 +1,6 @@
+# AI Dev Kit: skills are managed by `databricks aitools`, the rest is machine state
+.claude/skills/
+.claude/settings.local.json
+.ai-dev-kit/
+.databricks/
+.mcp.json
