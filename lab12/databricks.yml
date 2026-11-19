@@ -21,6 +21,9 @@ variables:
   judge_endpoint:
     description: Chat model from another family that grades the answers
     default: databricks-gpt-oss-120b
+  search_endpoint:
+    description: AI Search endpoint that hosts the index, billed while it exists
+    default: elina-sharabura-lab12
 
 targets:
   dev:
