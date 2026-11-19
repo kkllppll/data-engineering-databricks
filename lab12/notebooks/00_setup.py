@@ -97,3 +97,41 @@ CREATE TABLE IF NOT EXISTS {fq_schema}.assistant_log (
 )
 COMMENT 'Every question to the assistant with what it retrieved and answered'
 """)
+
+# COMMAND ----------
+
+spark.sql(f"""
+CREATE TABLE IF NOT EXISTS {fq_schema}.eval_set (
+  question_id       STRING     NOT NULL,
+  question          STRING     NOT NULL,
+  reference_answer  STRING     NOT NULL COMMENT 'written from the documentation page',
+  answerable        BOOLEAN    NOT NULL COMMENT 'false: the corpus does not cover it, the right answer is a refusal',
+  expected_doc_id   STRING              COMMENT 'page that holds the answer, null when not answerable',
+  updated_at        TIMESTAMP  NOT NULL,
+  CONSTRAINT eval_set_pk PRIMARY KEY (question_id)
+)
+COMMENT 'Evaluation questions with reference answers, a copy of eval/eval_set.json in the repo'
+""")
+
+# COMMAND ----------
+
+spark.sql(f"""
+CREATE TABLE IF NOT EXISTS {fq_schema}.eval_runs (
+  run_id             STRING     NOT NULL,
+  evaluated_at       TIMESTAMP  NOT NULL,
+  question_id        STRING     NOT NULL,
+  mode               STRING     NOT NULL COMMENT 'rag or no_retrieval',
+  request_id         STRING     NOT NULL COMMENT 'the answer in assistant_log',
+  answerable         BOOLEAN    NOT NULL,
+  refused            BOOLEAN    NOT NULL,
+  behavior_correct   BOOLEAN    NOT NULL COMMENT 'answered an answerable question or refused an unanswerable one',
+  expected_doc_rank  INT                 COMMENT 'position of the expected page in the top-k, null when not found',
+  correctness        INT        NOT NULL COMMENT '1-5 from the judge, against the reference answer',
+  relevance          INT        NOT NULL COMMENT '1-5 from the judge',
+  groundedness       INT                 COMMENT '1-5 from the judge, null without retrieval',
+  judge_reason       STRING,
+  judge_endpoint     STRING     NOT NULL,
+  CONSTRAINT eval_runs_pk PRIMARY KEY (run_id, question_id, mode)
+)
+COMMENT 'Scores of every evaluation run, one row per question and mode'
+""")
