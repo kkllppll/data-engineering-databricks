@@ -1,0 +1,85 @@
+resources:
+  jobs:
+    lab12_rag_refresh:
+      name: lab12_rag_refresh
+      description: Keeps the knowledge base in line with the Saleor docs, ingest, chunk, embed, sync the search index
+      # two runs would MERGE into the same tables and sync the same index at once
+      max_concurrent_runs: 1
+      timeout_seconds: 3600
+      schedule:
+        quartz_cron_expression: "0 0 6 ? * MON"
+        timezone_id: Europe/Kiev
+        pause_status: PAUSED
+      email_notifications:
+        on_failure:
+          - ${workspace.current_user.userName}
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+        - name: schema
+          default: ${var.schema}
+        - name: docs_repo
+          default: ${var.docs_repo}
+        - name: docs_commit
+          default: ${var.docs_commit}
+        - name: docs_root
+          default: ${var.docs_root}
+        - name: topics
+          default: ${var.topics}
+        - name: max_chars
+          default: ${var.max_chars}
+        - name: overlap_chars
+          default: ${var.overlap_chars}
+        - name: min_chars
+          default: ${var.min_chars}
+        - name: drop_code_languages
+          default: ${var.drop_code_languages}
+        - name: embedding_endpoint
+          default: ${var.embedding_endpoint}
+        - name: embedding_dim
+          default: ${var.embedding_dim}
+      tasks:
+        - task_key: ingest_docs
+          notebook_task:
+            notebook_path: ../notebooks/01_ingest_docs.py
+        - task_key: chunk_docs
+          depends_on:
+            - task_key: ingest_docs
+          notebook_task:
+            notebook_path: ../notebooks/02_chunk_docs.py
+        - task_key: embed_chunks
+          depends_on:
+            - task_key: chunk_docs
+          notebook_task:
+            notebook_path: ../notebooks/03_embed_chunks.py
+        - task_key: sync_index
+          depends_on:
+            - task_key: embed_chunks
+          notebook_task:
+            notebook_path: ../notebooks/04_sync_index.py
+
+    lab12_rag_evaluate:
+      name: lab12_rag_evaluate
+      description: Scores the assistant on the eval set with and without retrieval, run after changes to the data, prompts or models
+      max_concurrent_runs: 1
+      timeout_seconds: 3600
+      email_notifications:
+        on_failure:
+          - ${workspace.current_user.userName}
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+        - name: schema
+          default: ${var.schema}
+        - name: embedding_endpoint
+          default: ${var.embedding_endpoint}
+        - name: llm_endpoint
+          default: ${var.llm_endpoint}
+        - name: judge_endpoint
+          default: ${var.judge_endpoint}
+        - name: top_k
+          default: ${var.top_k}
+      tasks:
+        - task_key: evaluate
+          notebook_task:
+            notebook_path: ../notebooks/06_evaluate.py

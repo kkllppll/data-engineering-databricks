@@ -1,6 +1,9 @@
 bundle:
   name: lab12_rag
 
+include:
+  - resources/*.yml
+
 sync:
   exclude:
     - screenshots
@@ -12,18 +15,45 @@ variables:
   schema:
     description: Lab 12 schema for documents, chunks, logs and evaluation results
     default: elina_sharabura_lab12
+  docs_repo:
+    description: GitHub repository of the corpus
+    default: saleor/saleor-docs
+  docs_commit:
+    description: Pinned commit of the corpus, every run reads the same pages
+    default: 1ba3c4359962ce9bdfef0231d067d10dc9b859de
+  docs_root:
+    description: Folder of the repository the pages are taken from
+    default: docs/developer
+  topics:
+    description: Top folders or pages of docs_root that form the corpus
+    default: address,attributes,channels,checkout,discounts,gift-cards,order,payments,permissions,price-calculation,price-freeze-period,products,shipping,stock,taxes,users
+  max_chars:
+    description: Longest chunk body in characters
+    default: "1500"
+  overlap_chars:
+    description: Text repeated from the end of a chunk at the start of the next one
+    default: "200"
+  min_chars:
+    description: Shorter chunk bodies are dropped as empty leftovers
+    default: "30"
+  drop_code_languages:
+    description: Code blocks left out of the chunks, long and without facts of their own
+    default: json,jsom,mermaid
   embedding_endpoint:
     description: Model serving endpoint that turns chunks and questions into vectors
     default: databricks-gte-large-en
+  embedding_dim:
+    description: Length of a vector from the embedding endpoint
+    default: "1024"
   llm_endpoint:
     description: Chat model that writes the answer from the retrieved chunks
     default: databricks-meta-llama-3-3-70b-instruct
   judge_endpoint:
     description: Chat model from another family that grades the answers
     default: databricks-gpt-oss-120b
-  search_endpoint:
-    description: AI Search endpoint that hosts the index, billed while it exists
-    default: elina-sharabura-lab12
+  top_k:
+    description: Number of chunks the assistant retrieves for a question
+    default: "5"
 
 targets:
   dev:
