@@ -3,6 +3,7 @@
     "CLAUDE_CODE_USE_POWERSHELL_TOOL": "0"
   },
   "permissions": {
+    "defaultMode": "default",
     "deny": [
       "Bash(git push:*)",
       "Bash(git commit:*)",
