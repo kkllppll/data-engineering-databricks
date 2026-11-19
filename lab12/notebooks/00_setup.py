@@ -68,3 +68,32 @@ CREATE TABLE IF NOT EXISTS {fq_schema}.chunks (
 COMMENT 'Chunks of the Saleor docs with their vectors, source of the vector search index'
 TBLPROPERTIES (delta.enableChangeDataFeed = true)
 """)
+
+
+# COMMAND ----------
+
+# holds the questions user ask, which may contain their data, so only the owner reads it
+spark.sql(f"""
+CREATE TABLE IF NOT EXISTS {fq_schema}.assistant_log (
+  request_id           STRING        NOT NULL,
+  asked_at             TIMESTAMP     NOT NULL,
+  asked_by             STRING        NOT NULL COMMENT 'user or job identity that asked',
+  source               STRING        NOT NULL COMMENT 'ask: a person, eval: an evaluation run',
+  mode                 STRING        NOT NULL COMMENT 'rag or no_retrieval',
+  question             STRING        NOT NULL,
+  topic_filter         STRING,
+  top_k                INT,
+  retrieved_chunk_ids  ARRAY<STRING>,
+  retrieved_scores     ARRAY<DOUBLE>,
+  prompt               STRING        NOT NULL COMMENT 'messages sent to the LLM, as JSON',
+  answer               STRING,
+  refused              BOOLEAN                COMMENT 'the answer is the fixed refusal phrase',
+  llm_endpoint         STRING        NOT NULL,
+  prompt_tokens        INT,
+  completion_tokens    INT,
+  latency_ms           INT,
+  error                STRING,
+  CONSTRAINT assistant_log_pk PRIMARY KEY (request_id)
+)
+COMMENT 'Every question to the assistant with what it retrieved and answered'
+""")
