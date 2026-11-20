@@ -1,0 +1,9 @@
+resources:
+  dashboards:
+    lab12_rag_monitoring:
+      display_name: lab12 RAG assistant monitoring
+      file_path: ../dashboards/lab12_rag_monitoring.lvdash.json
+      warehouse_id: ${var.warehouse_id}
+      # the dataset queries name bare tables, catalog and schema come from here
+      dataset_catalog: ${var.catalog}
+      dataset_schema: ${var.schema}

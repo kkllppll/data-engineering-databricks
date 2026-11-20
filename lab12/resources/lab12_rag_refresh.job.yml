@@ -57,29 +57,3 @@ resources:
             - task_key: embed_chunks
           notebook_task:
             notebook_path: ../notebooks/04_sync_index.py
-
-    lab12_rag_evaluate:
-      name: lab12_rag_evaluate
-      description: Scores the assistant on the eval set with and without retrieval, run after changes to the data, prompts or models
-      max_concurrent_runs: 1
-      timeout_seconds: 3600
-      email_notifications:
-        on_failure:
-          - ${workspace.current_user.userName}
-      parameters:
-        - name: catalog
-          default: ${var.catalog}
-        - name: schema
-          default: ${var.schema}
-        - name: embedding_endpoint
-          default: ${var.embedding_endpoint}
-        - name: llm_endpoint
-          default: ${var.llm_endpoint}
-        - name: judge_endpoint
-          default: ${var.judge_endpoint}
-        - name: top_k
-          default: ${var.top_k}
-      tasks:
-        - task_key: evaluate
-          notebook_task:
-            notebook_path: ../notebooks/06_evaluate.py

@@ -15,6 +15,10 @@ variables:
   schema:
     description: Lab 12 schema for documents, chunks, logs and evaluation results
     default: elina_sharabura_lab12
+  warehouse_id:
+    description: SQL warehouse that runs the dashboard queries, looked up by name
+    lookup:
+      warehouse: Serverless Starter Warehouse
   docs_repo:
     description: GitHub repository of the corpus
     default: saleor/saleor-docs
