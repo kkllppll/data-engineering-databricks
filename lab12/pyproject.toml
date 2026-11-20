@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "saleor-rag"
+version = "0.1.0"
+description = "Lab 12: RAG on Databricks, code shared by the notebooks"
+requires-python = ">=3.12,<3.13"
+# databricks-sdk comes with the Databricks runtime, locally it is in the test extra
+dependencies = []
+
+[project.optional-dependencies]
+test = ["pytest>=8", "pytest-cov>=5", "databricks-sdk"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.coverage.run]
+source = ["saleor_rag"]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 90

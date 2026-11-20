@@ -1,0 +1,18 @@
+{
+  "env": {
+    "CLAUDE_CODE_USE_POWERSHELL_TOOL": "0"
+  },
+  "permissions": {
+    "defaultMode": "default",
+    "deny": [
+      "Bash(git push:*)",
+      "Bash(git commit:*)",
+      "Bash(databricks bundle deploy:*)",
+      "Bash(databricks bundle destroy:*)",
+      "Bash(databricks auth token:*)",
+      "Read(**/.env)",
+      "Read(~/.databrickscfg)",
+      "Read(~/.databricks/**)"
+    ]
+  }
+}

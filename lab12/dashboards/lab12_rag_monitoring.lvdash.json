@@ -1,0 +1,423 @@
+{
+  "datasets": [
+    {
+      "name": "ds_eval_latest",
+      "displayName": "Evaluation, latest run",
+      "queryLines": [
+        "WITH latest AS (SELECT run_id FROM eval_runs ORDER BY evaluated_at DESC LIMIT 1)\n",
+        "SELECT r.run_id, r.evaluated_at, r.question_id, r.mode, r.answerable, r.refused, r.expected_doc_rank,\n",
+        "  CASE WHEN r.answerable THEN r.correctness END AS correctness_answerable,\n",
+        "  r.relevance, r.groundedness,\n",
+        "  CASE WHEN NOT r.answerable AND NOT r.refused THEN 1 ELSE 0 END AS answered_out_of_scope,\n",
+        "  CASE WHEN r.answerable AND r.refused THEN 1 ELSE 0 END AS refused_answerable,\n",
+        "  CASE WHEN r.mode = 'rag' AND r.answerable\n",
+        "       THEN CASE WHEN r.expected_doc_rank = 1 THEN 1.0 ELSE 0.0 END END AS hit_at_1,\n",
+        "  CASE WHEN r.mode = 'rag' AND r.answerable\n",
+        "       THEN CASE WHEN r.expected_doc_rank <= 5 THEN 1.0 ELSE 0.0 END END AS hit_at_5\n",
+        "FROM eval_runs r JOIN latest l ON r.run_id = l.run_id\n"
+      ]
+    },
+    {
+      "name": "ds_assistant_log",
+      "displayName": "Assistant log",
+      "queryLines": [
+        "SELECT request_id, asked_at, source, mode, latency_ms, prompt_tokens\n",
+        "FROM assistant_log\n"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "evaluation",
+      "displayName": "Evaluation (latest run)",
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1",
+      "layout": [
+        {
+          "widget": {
+            "name": "eval-header",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## RAG assistant: latest evaluation run\n",
+                "\n",
+                "Judge scores from 1 to 5 per mode, wrong behaviour counts and retrieval hit rate for the newest run_id in eval_runs. Correctness counts only answerable questions, groundedness only rag answers that are not refusals."
+              ]
+            }
+          },
+          "position": {"x": 0, "y": 0, "width": 12, "height": 2}
+        },
+        {
+          "widget": {
+            "name": "kpi-hit-at-1",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_eval_latest",
+                  "fields": [{"name": "avg(hit_at_1)", "expression": "AVG(`hit_at_1`)"}],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "avg(hit_at_1)",
+                  "displayName": "Hit@1",
+                  "format": {"type": "number-percent", "decimalPlaces": {"type": "max", "places": 1}}
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Hit@1 (rag)",
+                "showDescription": true,
+                "description": "Expected page ranked first, answerable questions"
+              }
+            }
+          },
+          "position": {"x": 0, "y": 2, "width": 6, "height": 3}
+        },
+        {
+          "widget": {
+            "name": "kpi-hit-at-5",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_eval_latest",
+                  "fields": [{"name": "avg(hit_at_5)", "expression": "AVG(`hit_at_5`)"}],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "avg(hit_at_5)",
+                  "displayName": "Hit@5",
+                  "format": {"type": "number-percent", "decimalPlaces": {"type": "max", "places": 1}}
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Hit@5 (rag)",
+                "showDescription": true,
+                "description": "Expected page in the top 5, answerable questions"
+              }
+            }
+          },
+          "position": {"x": 6, "y": 2, "width": 6, "height": 3}
+        },
+        {
+          "widget": {
+            "name": "scores-by-mode",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_eval_latest",
+                  "fields": [
+                    {"name": "mode", "expression": "`mode`"},
+                    {"name": "avg(correctness_answerable)", "expression": "AVG(`correctness_answerable`)"},
+                    {"name": "avg(relevance)", "expression": "AVG(`relevance`)"},
+                    {"name": "avg(groundedness)", "expression": "AVG(`groundedness`)"}
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {"fieldName": "mode", "scale": {"type": "categorical"}, "displayName": "Mode"},
+                "y": {
+                  "scale": {"type": "quantitative", "domain": {"min": 0, "max": 5}},
+                  "fields": [
+                    {"fieldName": "avg(correctness_answerable)", "displayName": "Correctness (answerable)"},
+                    {"fieldName": "avg(relevance)", "displayName": "Relevance"},
+                    {"fieldName": "avg(groundedness)", "displayName": "Groundedness"}
+                  ],
+                  "displayName": "Average score (1-5)"
+                },
+                "label": {"show": true}
+              },
+              "mark": {"layout": "group"},
+              "frame": {"showTitle": true, "title": "Judge scores by mode"}
+            }
+          },
+          "position": {"x": 0, "y": 5, "width": 6, "height": 6}
+        },
+        {
+          "widget": {
+            "name": "behaviour-by-mode",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_eval_latest",
+                  "fields": [
+                    {"name": "mode", "expression": "`mode`"},
+                    {"name": "sum(answered_out_of_scope)", "expression": "SUM(`answered_out_of_scope`)"},
+                    {"name": "sum(refused_answerable)", "expression": "SUM(`refused_answerable`)"}
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {"fieldName": "mode", "scale": {"type": "categorical"}, "displayName": "Mode"},
+                "y": {
+                  "scale": {"type": "quantitative"},
+                  "fields": [
+                    {"fieldName": "sum(answered_out_of_scope)", "displayName": "Answered out of scope"},
+                    {"fieldName": "sum(refused_answerable)", "displayName": "Refused answerable"}
+                  ],
+                  "displayName": "Questions"
+                },
+                "label": {"show": true}
+              },
+              "mark": {"layout": "group"},
+              "frame": {
+                "showTitle": true,
+                "title": "Wrong behaviour by mode",
+                "showDescription": true,
+                "description": "Out-of-scope questions that got an answer, answerable questions that got a refusal"
+              }
+            }
+          },
+          "position": {"x": 6, "y": 5, "width": 6, "height": 6}
+        },
+        {
+          "widget": {
+            "name": "latest-run-detail",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_eval_latest",
+                  "fields": [
+                    {"name": "run_id", "expression": "`run_id`"},
+                    {"name": "evaluated_at", "expression": "`evaluated_at`"},
+                    {"name": "question_id", "expression": "`question_id`"},
+                    {"name": "mode", "expression": "`mode`"},
+                    {"name": "answerable", "expression": "`answerable`"},
+                    {"name": "refused", "expression": "`refused`"},
+                    {"name": "correctness_answerable", "expression": "`correctness_answerable`"},
+                    {"name": "relevance", "expression": "`relevance`"},
+                    {"name": "groundedness", "expression": "`groundedness`"},
+                    {"name": "expected_doc_rank", "expression": "`expected_doc_rank`"}
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {"fieldName": "run_id", "displayName": "Run"},
+                  {"fieldName": "evaluated_at", "displayName": "Evaluated at"},
+                  {"fieldName": "question_id", "displayName": "Question"},
+                  {"fieldName": "mode", "displayName": "Mode"},
+                  {"fieldName": "answerable", "displayName": "Answerable"},
+                  {"fieldName": "refused", "displayName": "Refused"},
+                  {"fieldName": "correctness_answerable", "displayName": "Correctness"},
+                  {"fieldName": "relevance", "displayName": "Relevance"},
+                  {"fieldName": "groundedness", "displayName": "Groundedness"},
+                  {"fieldName": "expected_doc_rank", "displayName": "Expected page rank"}
+                ]
+              },
+              "frame": {"showTitle": true, "title": "Latest run, per question"}
+            }
+          },
+          "position": {"x": 0, "y": 11, "width": 12, "height": 7}
+        }
+      ]
+    },
+    {
+      "name": "usage",
+      "displayName": "Usage (assistant_log)",
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1",
+      "layout": [
+        {
+          "widget": {
+            "name": "usage-header",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## RAG assistant: usage\n",
+                "\n",
+                "Every question in assistant_log. Source ask is a person, eval is an evaluation run."
+              ]
+            }
+          },
+          "position": {"x": 0, "y": 0, "width": 8, "height": 2}
+        },
+        {
+          "widget": {
+            "name": "filter-asked-at",
+            "queries": [
+              {
+                "name": "ds_asked_at",
+                "query": {
+                  "datasetName": "ds_assistant_log",
+                  "fields": [{"name": "asked_at", "expression": "`asked_at`"}],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-date-range-picker",
+              "encodings": {
+                "fields": [{"fieldName": "asked_at", "queryName": "ds_asked_at"}]
+              },
+              "frame": {"showTitle": true, "title": "Asked at"}
+            }
+          },
+          "position": {"x": 8, "y": 0, "width": 4, "height": 2}
+        },
+        {
+          "widget": {
+            "name": "questions-per-day",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_assistant_log",
+                  "fields": [
+                    {"name": "daily(asked_at)", "expression": "DATE_TRUNC(\"DAY\", `asked_at`)"},
+                    {"name": "source", "expression": "`source`"},
+                    {"name": "count(request_id)", "expression": "COUNT(`request_id`)"}
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {"fieldName": "daily(asked_at)", "scale": {"type": "temporal"}, "displayName": "Day"},
+                "y": {"fieldName": "count(request_id)", "scale": {"type": "quantitative"}, "displayName": "Questions"},
+                "color": {
+                  "fieldName": "source",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {"value": "ask", "color": "#0072B2"},
+                      {"value": "eval", "color": "#CC79A7"}
+                    ]
+                  },
+                  "displayName": "Source"
+                }
+              },
+              "frame": {"showTitle": true, "title": "Questions per day by source"}
+            }
+          },
+          "position": {"x": 0, "y": 2, "width": 12, "height": 5}
+        },
+        {
+          "widget": {
+            "name": "latency-by-mode",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_assistant_log",
+                  "fields": [
+                    {"name": "mode", "expression": "`mode`"},
+                    {"name": "avg(latency_ms)", "expression": "AVG(`latency_ms`)"}
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {"fieldName": "mode", "scale": {"type": "categorical"}, "displayName": "Mode"},
+                "y": {"fieldName": "avg(latency_ms)", "scale": {"type": "quantitative"}, "displayName": "Average latency (ms)"},
+                "color": {
+                  "fieldName": "mode",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {"value": "rag", "color": "#009E73"},
+                      {"value": "no_retrieval", "color": "#E69F00"}
+                    ]
+                  },
+                  "displayName": "Mode"
+                },
+                "label": {"show": true}
+              },
+              "frame": {"showTitle": true, "title": "Average latency by mode (ms)"}
+            }
+          },
+          "position": {"x": 0, "y": 7, "width": 6, "height": 5}
+        },
+        {
+          "widget": {
+            "name": "prompt-tokens-by-mode",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_assistant_log",
+                  "fields": [
+                    {"name": "mode", "expression": "`mode`"},
+                    {"name": "avg(prompt_tokens)", "expression": "AVG(`prompt_tokens`)"}
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {"fieldName": "mode", "scale": {"type": "categorical"}, "displayName": "Mode"},
+                "y": {"fieldName": "avg(prompt_tokens)", "scale": {"type": "quantitative"}, "displayName": "Average prompt tokens"},
+                "color": {
+                  "fieldName": "mode",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {"value": "rag", "color": "#009E73"},
+                      {"value": "no_retrieval", "color": "#E69F00"}
+                    ]
+                  },
+                  "displayName": "Mode"
+                },
+                "label": {"show": true}
+              },
+              "frame": {"showTitle": true, "title": "Average prompt tokens by mode"}
+            }
+          },
+          "position": {"x": 6, "y": 7, "width": 6, "height": 5}
+        }
+      ]
+    }
+  ],
+  "uiSettings": {
+    "theme": {
+      "canvasBackgroundColor": {"light": "#FCFCFC", "dark": "#1F272D"},
+      "widgetBackgroundColor": {"light": "#FFFFFF", "dark": "#11171C"},
+      "widgetBorderColor": {"light": "#FFFFFF", "dark": "#11171C"},
+      "fontColor": {"light": "#11171C", "dark": "#E8ECF0"},
+      "selectionColor": {"light": "#2272B4", "dark": "#8ACAFF"},
+      "visualizationColors": ["#0072B2", "#E69F00", "#009E73", "#CC79A7", "#D55E00", "#56B4E9"],
+      "widgetHeaderAlignment": "LEFT"
+    }
+  }
+}
