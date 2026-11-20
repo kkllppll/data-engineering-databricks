@@ -12,7 +12,7 @@ resources:
         pause_status: PAUSED
       email_notifications:
         on_failure:
-          - ${workspace.current_user.userName}
+          - ${var.owner_email}
       parameters:
         - name: catalog
           default: ${var.catalog}

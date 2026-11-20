@@ -58,6 +58,9 @@ variables:
   top_k:
     description: Number of chunks the assistant retrieves for a question
     default: "5"
+  owner_email:
+    description: Person who gets failure emails and CAN_MANAGE on the prod deployment
+    default: ${workspace.current_user.userName}
 
 targets:
   dev:
@@ -65,3 +68,13 @@ targets:
     default: true
     workspace:
       host: https://dbc-927f3e1b-27c6.cloud.databricks.com
+
+  # Free Edition has one workspace, prod uses the same host, catalog and schema as dev
+  prod:
+    mode: production
+    workspace:
+      host: https://dbc-927f3e1b-27c6.cloud.databricks.com
+      root_path: /Workspace/Users/${workspace.current_user.userName}/.bundle/${bundle.name}/${bundle.target}
+    permissions:
+      - user_name: ${var.owner_email}
+        level: CAN_MANAGE
